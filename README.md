@@ -27,6 +27,8 @@ We expect candidates to spend 1-3 hours on this exercise.
 - Log sources could contain logs from last year, from yesterday, even from 100 years ago. We won't know the timeframe of a log source until we start looking.
 - Consider what would happen when asked to merge 1 million log sources. Where might bottlenecks arise?
 
+A: For 1 million log sources we have to implement maxHeap and read which are oldest edited files and read files which are recent edits.
+
 There are two parts of the challenge which you'll see when diving into things. You can get started by running `npm start`.
 
 ## Submitting
