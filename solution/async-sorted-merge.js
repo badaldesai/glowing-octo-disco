@@ -6,20 +6,33 @@ const MinHeap = require("./min-heap");
 module.exports = (logSources, printer) => {
   return new Promise(async (resolve, reject) => {
     const minHeap = new MinHeap();
-    for (const source of logSources) {
-      if (!source.drained) {
-        const logEntry = await source.popAsync();
-        if (logEntry) minHeap.insert({ logEntry, source });
+    const queuePromise = {};
+    let activeSource = -1;
+
+    async function fetchNextLog(sourceIndex) {
+      const entry = await logSources[sourceIndex].popAsync();
+      if (entry) {
+        minHeap.insert({ logEntry: entry, sourceIndex });
+      }
+      if (entry && sourceIndex !== activeSource) {
+        if (!queuePromise[sourceIndex]) {
+          queuePromise[sourceIndex] = [fetchNextLog(sourceIndex)];
+        } else {
+          queuePromise[sourceIndex].push(fetchNextLog(sourceIndex));
+        }
       }
     }
 
+    const fetchPromises = logSources.map((_, index) => fetchNextLog(index));
+    await Promise.all(fetchPromises);
+
     while (minHeap.heap.length > 0) {
-      const { logEntry, source } = minHeap.extractMin();
+      const { logEntry, sourceIndex } = minHeap.extractMin();
       printer.print(logEntry);
-      if (!source.drained) {
-        const newLogEntry = await source.popAsync();
-        if (newLogEntry) minHeap.insert({ logEntry: newLogEntry, source });
-      }
+      activeSource = sourceIndex;
+      await Promise.all(queuePromise[sourceIndex]);
+      activeSource = -1;
+      queuePromise[sourceIndex] = [fetchNextLog(sourceIndex)];
     }
     printer.done();
     resolve(console.log("Async sort complete."));
